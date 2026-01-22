@@ -35,33 +35,114 @@ const generateEmbedding = async (text) => {
 };
 
 /**
+ * Generate query embedding (simple fallback - same as ingestion script)
+ */
+function generateQueryEmbedding(text) {
+  const words = text.toLowerCase()
+    .replace(/[^\w\s]/g, ' ')
+    .split(/\s+/)
+    .filter(w => w.length > 2);
+  
+  const embedding = new Array(1536).fill(0);
+  const wordFreq = {};
+  
+  words.forEach(word => {
+    wordFreq[word] = (wordFreq[word] || 0) + 1;
+  });
+  
+  Object.entries(wordFreq).forEach(([word, freq]) => {
+    for (let seed = 0; seed < 3; seed++) {
+      let hash = seed;
+      for (let i = 0; i < word.length; i++) {
+        hash = ((hash << 5) - hash) + word.charCodeAt(i);
+        hash = hash & hash;
+      }
+      const index = Math.abs(hash) % 1536;
+      embedding[index] += freq / (seed + 1);
+    }
+  });
+  
+  for (let i = 0; i < words.length - 1; i++) {
+    const bigram = words[i] + '_' + words[i + 1];
+    let hash = 0;
+    for (let j = 0; j < bigram.length; j++) {
+      hash = ((hash << 5) - hash) + bigram.charCodeAt(j);
+      hash = hash & hash;
+    }
+    const index = Math.abs(hash) % 1536;
+    embedding[index] += 0.5;
+  }
+  
+  const magnitude = Math.sqrt(embedding.reduce((sum, val) => sum + val * val, 0));
+  if (magnitude > 0) {
+    return embedding.map(val => val / magnitude);
+  }
+  return embedding.map(() => (Math.random() - 0.5) * 0.01);
+}
+
+/**
  * Query Pinecone for relevant context
  */
 export const queryRAG = async (biomarkerName, namespace = 'biomarkers') => {
   try {
     const index = await initializePinecone();
-    
-    // For now, use keyword-based search
-    // In production, use proper vector embeddings
     const queryText = biomarkerName.toLowerCase();
     
-    // Query Pinecone (this is a simplified version)
-    // In production, you would:
-    // 1. Generate embedding for queryText
-    // 2. Query Pinecone with that embedding
-    // 3. Retrieve top-k results
+    // Generate query embedding
+    const queryEmbedding = generateQueryEmbedding(queryText);
     
-    // For demo purposes, return sample context
-    // Replace this with actual Pinecone queries once embeddings are set up
-    const sampleContext = getSampleContext(biomarkerName);
+    // Query biomarkers namespace
+    let biomarkerInfo = '';
+    try {
+      const biomarkerResponse = await index.namespace('biomarkers').query({
+        vector: queryEmbedding,
+        topK: 3,
+        includeMetadata: true
+      });
+      
+      if (biomarkerResponse.matches && biomarkerResponse.matches.length > 0) {
+        biomarkerInfo = biomarkerResponse.matches
+          .map(match => match.metadata?.text || '')
+          .filter(text => text.length > 0)
+          .join(' ');
+      }
+    } catch (err) {
+      console.warn('Error querying biomarkers namespace:', err.message);
+    }
     
-    return sampleContext;
+    // Query nutrition guidelines namespace
+    let nutritionInfo = '';
+    try {
+      const nutritionResponse = await index.namespace('nutrition_guidelines').query({
+        vector: queryEmbedding,
+        topK: 2,
+        includeMetadata: true
+      });
+      
+      if (nutritionResponse.matches && nutritionResponse.matches.length > 0) {
+        nutritionInfo = nutritionResponse.matches
+          .map(match => match.metadata?.text || '')
+          .filter(text => text.length > 0)
+          .join(' ');
+      }
+    } catch (err) {
+      console.warn('Error querying nutrition_guidelines namespace:', err.message);
+    }
+    
+    // Return results or fallback
+    if (biomarkerInfo || nutritionInfo) {
+      return {
+        biomarkerInfo: biomarkerInfo || `Information about ${biomarkerName}`,
+        nutritionInfo: nutritionInfo || `General nutrition guidelines for ${biomarkerName}`
+      };
+    }
+    
+    // Fallback to sample context if no results
+    return getSampleContext(biomarkerName);
   } catch (error) {
     console.error('Pinecone query error:', error);
-    return {
-      biomarkerInfo: `Information about ${biomarkerName}`,
-      nutritionInfo: `General nutrition guidelines for ${biomarkerName}`
-    };
+    // Fallback to sample context on error
+    return getSampleContext(biomarkerName);
   }
 };
 
