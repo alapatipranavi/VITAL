@@ -10,18 +10,17 @@ const UploadReport = () => {
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [uploadStep, setUploadStep] = useState(0); // 0: upload, 1: extraction, 2: analysis, 3: insights
   const navigate = useNavigate();
 
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
     if (selectedFile) {
-      // Validate file type
       const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'application/pdf'];
       if (!validTypes.includes(selectedFile.type)) {
         setError('Please upload a PDF or image file (JPEG, PNG, GIF)');
         return;
       }
-      // Validate file size (10MB)
       if (selectedFile.size > 10 * 1024 * 1024) {
         setError('File size must be less than 10MB');
         return;
@@ -40,77 +39,125 @@ const UploadReport = () => {
 
     setLoading(true);
     setError('');
+    setUploadStep(1); // Start extraction
 
     try {
+      // Simulate step progression
+      setTimeout(() => setUploadStep(2), 1000); // Analysis step
+      
       const response = await apiService.uploadReport(file);
-      alert('Report uploaded and processed successfully!');
-      navigate(`/biomarker/${response.report.id}`);
+      
+      setUploadStep(3); // Insights ready
+      setTimeout(() => {
+        navigate(`/biomarker/${response.report.id}`);
+      }, 500);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to upload report');
-    } finally {
+      setUploadStep(0);
       setLoading(false);
     }
   };
 
+  const steps = [
+    { id: 0, label: 'Upload Report', sublabel: 'PDF or image file', icon: '📤' },
+    { id: 1, label: 'AI Extraction', sublabel: 'Extract biomarkers', icon: '🔍' },
+    { id: 2, label: 'Analysis', sublabel: 'Detect abnormalities', icon: '📊' },
+    { id: 3, label: 'Insights', sublabel: 'Get recommendations', icon: '💡' }
+  ];
+
   return (
-    <div>
+    <div className="upload-page">
       <Navbar user={user} logout={logout} />
       <div className="container">
-        <h1>Upload Lab Report</h1>
-        <div className="card">
-          <p className="upload-info">
-            Upload a PDF or image of your lab report. Our AI will extract biomarker
-            values and provide personalized insights.
+        <div className="upload-header">
+          <div className="ai-badge">AI-Powered Analysis</div>
+          <h1 className="upload-title">Upload Lab Report</h1>
+          <p className="upload-subtitle">
+            Upload your blood test report and our AI will extract and analyze your biomarkers with clinical precision
           </p>
-          {error && <div className="error-message">{error}</div>}
-          <form onSubmit={handleSubmit} className="upload-form">
-            <div className="file-input-wrapper">
-              <input
-                type="file"
-                id="file-input"
-                accept=".pdf,.jpg,.jpeg,.png,.gif"
-                onChange={handleFileChange}
-                className="file-input"
-              />
-              <label htmlFor="file-input" className="file-label">
-                {file ? file.name : 'Choose File (PDF or Image)'}
-              </label>
-            </div>
-            {file && (
-              <div className="file-preview">
-                <p>Selected: {file.name}</p>
-                <p>Size: {(file.size / 1024 / 1024).toFixed(2)} MB</p>
-              </div>
-            )}
-            <button
-              type="submit"
-              className="btn btn-primary"
-              disabled={loading || !file}
-            >
-              {loading ? (
-                <>
-                  <span className="loading-spinner"></span>
-                  Processing with AI...
-                </>
-              ) : (
-                'Upload & Analyze'
-              )}
-            </button>
-          </form>
-          <div className="upload-tips">
-            <h3>Tips for best results:</h3>
-            <ul>
-              <li>Ensure the report is clear and readable</li>
-              <li>Make sure all text is visible and not cut off</li>
-              <li>Use high-quality images or PDFs</li>
-              <li>Common formats: PDF, JPEG, PNG</li>
-            </ul>
-          </div>
         </div>
+
+        {/* Process Flow */}
+        <div className="process-flow">
+          {steps.map((step, index) => (
+            <div key={step.id} className="process-step-wrapper">
+              <div className={`process-step ${uploadStep >= step.id ? 'completed' : ''} ${uploadStep === step.id ? 'active' : ''}`}>
+                <div className="step-icon">
+                  {uploadStep > step.id ? '✅' : step.icon}
+                </div>
+                <div className="step-label">{step.label}</div>
+                <div className="step-sublabel">{step.sublabel}</div>
+              </div>
+              {index < steps.length - 1 && (
+                <div className={`step-connector ${uploadStep > step.id ? 'completed' : ''}`}></div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Upload Form or Analysis Status */}
+        {uploadStep === 0 ? (
+          <div className="upload-card">
+            {error && <div className="error-message">{error}</div>}
+            <form onSubmit={handleSubmit} className="upload-form">
+              <div className="file-input-wrapper">
+                <input
+                  type="file"
+                  id="file-input"
+                  accept=".pdf,.jpg,.jpeg,.png,.gif"
+                  onChange={handleFileChange}
+                  className="file-input"
+                  disabled={loading}
+                />
+                <label htmlFor="file-input" className="file-label">
+                  <div className="file-icon">📄</div>
+                  <div>
+                    <div className="file-label-text">
+                      {file ? file.name : 'Choose File (PDF or Image)'}
+                    </div>
+                    <div className="file-label-hint">
+                      Click to browse or drag and drop
+                    </div>
+                  </div>
+                </label>
+              </div>
+              {file && (
+                <div className="file-preview">
+                  <p><strong>Selected:</strong> {file.name}</p>
+                  <p><strong>Size:</strong> {(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                </div>
+              )}
+              <button
+                type="submit"
+                className="btn btn-primary upload-btn"
+                disabled={loading || !file}
+              >
+                {loading ? 'Processing...' : 'Upload & Analyze'}
+              </button>
+            </form>
+          </div>
+        ) : uploadStep === 1 || uploadStep === 2 ? (
+          <div className="analysis-status">
+            <div className="analysis-icon">📊</div>
+            <h2 className="analysis-title">
+              {uploadStep === 1 ? 'Extracting biomarkers...' : 'Analyzing biomarker levels...'}
+            </h2>
+            <p className="analysis-subtitle">
+              {uploadStep === 1 
+                ? 'Using AI vision to read your report' 
+                : 'Comparing against reference ranges'}
+            </p>
+            <div className="progress-bar-container">
+              <div 
+                className="progress-bar-fill"
+                style={{ width: `${(uploadStep / 3) * 100}%` }}
+              ></div>
+            </div>
+          </div>
+        ) : null}
       </div>
     </div>
   );
 };
 
 export default UploadReport;
-

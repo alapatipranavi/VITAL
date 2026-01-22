@@ -1,18 +1,60 @@
 .disclaimer-banner {
-  background-color: #fef3c7;
-  border-bottom: 2px solid #f59e0b;
-  padding: 0.75rem 1rem;
-  text-align: center;
-  font-size: 0.875rem;
-  color: #92400e;
+  background: #E8F4FD;
+  border-bottom: 1px solid #93c5fd;
+  padding: 0.75rem 0;
+  position: sticky;
+  top: 0;
+  z-index: 999;
 }
 
 .disclaimer-content {
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
+  padding: 0 2rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
 }
 
-.disclaimer-banner strong {
-  font-weight: 600;
+.disclaimer-icon {
+  font-size: 1.25rem;
+  flex-shrink: 0;
 }
 
+.disclaimer-text {
+  flex: 1;
+  color: #1e40af;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.disclaimer-close {
+  background: none;
+  border: none;
+  color: #1e40af;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+
+.disclaimer-close:hover {
+  background: rgba(30, 64, 175, 0.1);
+}
+
+@media (max-width: 768px) {
+  .disclaimer-content {
+    padding: 0 1rem;
+  }
+
+  .disclaimer-text {
+    font-size: 0.75rem;
+  }
+}

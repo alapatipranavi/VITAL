@@ -3,13 +3,12 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { apiService } from '../services/api.service';
 import Navbar from '../components/Navbar';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceArea } from 'recharts';
 import './Trends.css';
 
 const Trends = () => {
   const { user, logout } = useAuth();
   const [trends, setTrends] = useState([]);
-  const [selectedTrend, setSelectedTrend] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -20,9 +19,6 @@ const Trends = () => {
     try {
       const trendsData = await apiService.getAllTrends();
       setTrends(trendsData);
-      if (trendsData.length > 0) {
-        setSelectedTrend(trendsData[0]);
-      }
     } catch (error) {
       console.error('Failed to fetch trends:', error);
     } finally {
@@ -30,46 +26,64 @@ const Trends = () => {
     }
   };
 
-  const handleTrendSelect = async (testName) => {
-    try {
-      setLoading(true);
-      const trendData = await apiService.getTrends(testName);
-      // Ensure trendData has the required structure
-      if (trendData && trendData.testName) {
-        setSelectedTrend(trendData);
-      } else {
-        console.error('Invalid trend data received:', trendData);
-        // Set a fallback trend with empty data
-        setSelectedTrend({
-          testName,
-          trendData: [],
-          trendDirection: 'stable',
-          insight: 'No trend data available for this biomarker.'
-        });
-      }
-    } catch (error) {
-      console.error('Failed to fetch trend:', error);
-      // Set fallback on error
-      setSelectedTrend({
-        testName,
-        trendData: [],
-        trendDirection: 'stable',
-        insight: `Unable to load trend data for ${testName}. Please try again.`
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const formatChartData = (trendData) => {
+    if (!trendData || trendData.length === 0) return [];
     return trendData.map((point) => ({
       date: new Date(point.date).toLocaleDateString('en-US', {
         month: 'short',
         day: 'numeric'
       }),
-      value: point.value,
+      value: parseFloat(point.value),
       status: point.status
     }));
+  };
+
+  const parseReferenceRange = (rangeStr) => {
+    if (!rangeStr) return { min: 0, max: 100 };
+    const cleaned = rangeStr.trim();
+    const rangeMatch = cleaned.match(/(\d+\.?\d*)\s*-\s*(\d+\.?\d*)/);
+    if (rangeMatch) {
+      return {
+        min: parseFloat(rangeMatch[1]),
+        max: parseFloat(rangeMatch[2])
+      };
+    }
+    return { min: 0, max: 100 };
+  };
+
+  const calculatePercentageChange = (trendData) => {
+    if (!trendData || trendData.length < 2) return 0;
+    const first = parseFloat(trendData[0].value);
+    const last = parseFloat(trendData[trendData.length - 1].value);
+    if (first === 0) return 0;
+    return ((last - first) / first) * 100;
+  };
+
+  const getTrendDirection = (percentageChange) => {
+    if (percentageChange > 5) return { direction: 'up', color: '#ef4444', icon: '📈' };
+    if (percentageChange < -5) return { direction: 'down', color: '#10b981', icon: '📉' };
+    return { direction: 'stable', color: '#6b7280', icon: '➡️' };
+  };
+
+  const getTrendMessage = (trend, percentageChange) => {
+    const range = parseReferenceRange(trend.referenceRange);
+    const latestValue = trend.trendData && trend.trendData.length > 0 
+      ? parseFloat(trend.trendData[trend.trendData.length - 1].value) 
+      : 0;
+    
+    if (latestValue < range.min) {
+      return 'This biomarker needs attention. Consider consulting your healthcare provider.';
+    }
+    if (latestValue > range.max) {
+      return 'This biomarker needs attention. Consider consulting your healthcare provider.';
+    }
+    if (Math.abs(percentageChange) < 5) {
+      return 'Your levels are within the healthy range.';
+    }
+    if (percentageChange > 0) {
+      return 'Trending in the right direction. Continue with your current health plan.';
+    }
+    return 'This biomarker needs attention. Consider consulting your healthcare provider.';
   };
 
   if (loading) {
@@ -83,11 +97,14 @@ const Trends = () => {
     );
   }
 
+  // Display top 4 trends in a grid
+  const displayTrends = trends.slice(0, 4);
+
   return (
-    <div>
+    <div className="trends-page">
       <Navbar user={user} logout={logout} />
       <div className="container">
-        <div className="page-header">
+        <div className="page-header-trends">
           <h1>Biomarker Trends</h1>
           <p>Track your biomarker changes over time</p>
         </div>
@@ -102,127 +119,101 @@ const Trends = () => {
             </div>
           </div>
         ) : (
-          <>
-            <div className="trends-layout">
-              <div className="trends-list">
-                <h2>Select Biomarker</h2>
-                <div className="trend-selector">
-                  {trends.map((trend) => (
-                    <button
-                      key={trend.testName}
-                      className={`trend-button ${
-                        selectedTrend?.testName === trend.testName
-                          ? 'active'
-                          : ''
-                      }`}
-                      onClick={() => handleTrendSelect(trend.testName)}
-                    >
-                      <div className="trend-button-header">
-                        <span>{trend.testName}</span>
-                        {trend.latestStatus && (
-                          <span
-                            className={`status-badge status-${trend.latestStatus.toLowerCase()}`}
-                          >
-                            {trend.latestStatus}
-                          </span>
-                        )}
-                      </div>
-                      {trend.latestValue && (
-                        <div className="trend-button-value">
-                          {trend.latestValue} {trend.trendData[0]?.unit || ''}
-                        </div>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              </div>
+          <div className="trends-grid">
+            {displayTrends.map((trend) => {
+              const chartData = formatChartData(trend.trendData);
+              const range = parseReferenceRange(trend.referenceRange);
+              const percentageChange = calculatePercentageChange(trend.trendData);
+              const trendInfo = getTrendDirection(percentageChange);
+              const trendMessage = getTrendMessage(trend, percentageChange);
+              const unit = trend.trendData && trend.trendData.length > 0 
+                ? trend.trendData[0].unit || '' 
+                : '';
 
-              <div className="trend-chart">
-                {selectedTrend && selectedTrend.trendData && selectedTrend.trendData.length > 0 ? (
-                  <>
-                    <div className="trend-header">
-                      <h2>{selectedTrend.testName} Trend</h2>
-                      <div className="trend-meta">
-                        <span className="trend-unit">{selectedTrend.trendData[0]?.unit || ''}</span>
-                      </div>
-                    </div>
-                    <div className="card">
-                      {selectedTrend.insight && (
-                        <div className="insight-box">
-                          <p>{selectedTrend.insight}</p>
-                        </div>
-                      )}
-                      <ResponsiveContainer width="100%" height={400}>
-                        <LineChart data={formatChartData(selectedTrend.trendData)}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                          <XAxis 
-                            dataKey="date" 
-                            stroke="#475569"
-                            style={{ fontSize: '12px' }}
-                          />
-                          <YAxis 
-                            stroke="#475569"
-                            style={{ fontSize: '12px' }}
-                            label={{ value: `Value (${selectedTrend.trendData[0]?.unit || ''})`, angle: -90, position: 'insideLeft', style: { fontSize: '12px', fill: '#475569' } }}
-                          />
-                          <Tooltip 
-                            contentStyle={{ 
-                              backgroundColor: '#ffffff', 
-                              border: '1px solid #cbd5e1',
-                              borderRadius: '8px',
-                              padding: '8px'
-                            }}
-                            formatter={(value, name, props) => [
-                              `${value} ${selectedTrend.trendData[0]?.unit || ''}`,
-                              'Value'
-                            ]}
-                            labelFormatter={(label) => `Date: ${label}`}
-                          />
-                          <Legend 
-                            wrapperStyle={{ paddingTop: '10px' }}
-                          />
-                          <Line
-                            type="monotone"
-                            dataKey="value"
-                            stroke="#14b8a6"
-                            strokeWidth={3}
-                            dot={{ fill: '#14b8a6', r: 4 }}
-                            activeDot={{ r: 6 }}
-                            name={`Value (${selectedTrend.trendData[0]?.unit || ''})`}
-                          />
-                        </LineChart>
-                      </ResponsiveContainer>
-                      <div className="trend-info">
-                        <p>
-                          <strong>Trend Direction:</strong>{' '}
-                          {selectedTrend.trendDirection}
-                        </p>
-                        <p>
-                          <strong>Data Points:</strong>{' '}
-                          {selectedTrend.trendData.length}
-                        </p>
-                      </div>
-                    </div>
-                  </>
-                ) : selectedTrend ? (
-                  <div className="card">
-                    <div className="empty-state">
-                      <p>
-                        {selectedTrend.insight || 'No trend data available for this biomarker.'}
-                      </p>
-                      <p className="text-secondary" style={{ fontSize: '0.875rem', marginTop: '0.5rem' }}>
-                        Upload more reports to see trends over time.
-                      </p>
+              // Calculate Y-axis domain
+              const values = chartData.map(d => d.value);
+              const minValue = Math.min(...values, range.min) * 0.9;
+              const maxValue = Math.max(...values, range.max) * 1.1;
+
+              return (
+                <div key={trend.testName} className="trend-card">
+                  <div className="trend-card-header">
+                    <h3 className="trend-title">{trend.testName}</h3>
+                    <div className="trend-indicator">
+                      <span className="trend-arrow" style={{ color: trendInfo.color }}>
+                        {trendInfo.icon}
+                      </span>
+                      <span className="trend-percentage" style={{ color: trendInfo.color }}>
+                        {Math.abs(percentageChange).toFixed(1)}%
+                      </span>
                     </div>
                   </div>
-                ) : (
-                  <div className="card">
-                    <div className="loading">Select a biomarker to view trends</div>
+                  <div className="trend-reference">
+                    Reference Range: {trend.referenceRange || 'N/A'}
                   </div>
-                )}
-              </div>
-            </div>
-          </>
+                  {chartData.length > 0 ? (
+                    <>
+                      <div className="trend-chart-container">
+                        <ResponsiveContainer width="100%" height={200}>
+                          <LineChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                            <XAxis 
+                              dataKey="date" 
+                              stroke="#6b7280"
+                              style={{ fontSize: '11px' }}
+                              tick={{ fill: '#6b7280' }}
+                            />
+                            <YAxis 
+                              stroke="#6b7280"
+                              style={{ fontSize: '11px' }}
+                              tick={{ fill: '#6b7280' }}
+                              domain={[minValue, maxValue]}
+                            />
+                            <Tooltip 
+                              contentStyle={{ 
+                                backgroundColor: '#ffffff', 
+                                border: '1px solid #cbd5e1',
+                                borderRadius: '6px',
+                                padding: '6px',
+                                fontSize: '12px'
+                              }}
+                              formatter={(value) => [`${value.toFixed(2)} ${unit}`, 'Value']}
+                            />
+                            <ReferenceArea 
+                              y1={range.min} 
+                              y2={range.max} 
+                              fill="#d1fae5" 
+                              fillOpacity={0.3}
+                            />
+                            <Line
+                              type="monotone"
+                              dataKey="value"
+                              stroke="#3b82f6"
+                              strokeWidth={2.5}
+                              dot={{ 
+                                fill: chartData[chartData.length - 1]?.status === 'NORMAL' ? '#10b981' : '#ef4444',
+                                r: 4,
+                                strokeWidth: 2,
+                                stroke: '#fff'
+                              }}
+                              activeDot={{ r: 6 }}
+                            />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
+                      <div className="trend-message">
+                        {trendMessage}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="trend-no-data">
+                      <p>No trend data available for this biomarker.</p>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         )}
       </div>
     </div>
@@ -230,4 +221,3 @@ const Trends = () => {
 };
 
 export default Trends;
-

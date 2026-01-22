@@ -8,28 +8,28 @@
 }
 
 :root {
-  /* Health-Tech Color Palette */
-  --primary-color: #14b8a6; /* Teal */
-  --primary-dark: #0d9488;
-  --primary-light: #5eead4;
+  /* Healthcare Analytics Color Palette - Blue Theme */
+  --primary-color: #3b82f6; /* Blue */
+  --primary-dark: #1e40af;
+  --primary-light: #60a5fa;
   --secondary-color: #6366f1; /* Indigo */
   --secondary-dark: #4f46e5;
-  --accent-color: #f97316; /* Soft Orange */
-  --accent-light: #fb923c;
+  --accent-color: #f59e0b; /* Amber */
+  --accent-light: #fbbf24;
   --danger-color: #ef4444;
   --warning-color: #f59e0b;
   --success-color: #10b981;
-  --bg-color: #f0fdfa; /* Soft teal-tinted background */
-  --bg-gradient: linear-gradient(135deg, #f0fdfa 0%, #ecfeff 100%);
+  --bg-color: #f5f7fa; /* Light gray */
+  --bg-gradient: linear-gradient(135deg, #f5f7fa 0%, #ffffff 100%);
   --card-bg: #ffffff;
   --card-bg-soft: #fafafa;
-  --text-primary: #0f172a;
-  --text-secondary: #475569;
-  --border-color: #cbd5e1;
-  --border-light: #e2e8f0;
-  --shadow: 0 2px 8px 0 rgba(20, 184, 166, 0.08), 0 1px 3px 0 rgba(0, 0, 0, 0.05);
-  --shadow-lg: 0 10px 25px -5px rgba(20, 184, 166, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-  --shadow-soft: 0 4px 12px 0 rgba(20, 184, 166, 0.06);
+  --text-primary: #1f2937;
+  --text-secondary: #6b7280;
+  --border-color: #e5e7eb;
+  --border-light: #f3f4f6;
+  --shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.12);
+  --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
 body {
@@ -38,8 +38,7 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: var(--bg-gradient);
-  background-attachment: fixed;
+  background: var(--bg-color);
   color: var(--text-primary);
   line-height: 1.6;
 }
@@ -49,16 +48,16 @@ body {
 }
 
 .container {
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
-  padding: 2rem;
+  padding: 1.5rem 2rem;
 }
 
 .card {
   background: var(--card-bg);
   border-radius: 12px;
   padding: 1.5rem;
-  box-shadow: var(--shadow-soft);
+  box-shadow: var(--shadow);
   margin-bottom: 1.5rem;
   border: 1px solid var(--border-light);
   transition: all 0.3s ease;
@@ -136,7 +135,7 @@ body {
 .input:focus {
   outline: none;
   border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.1);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 .label {
@@ -169,6 +168,22 @@ body {
   color: #92400e;
 }
 
+.loading {
+  text-align: center;
+  padding: 3rem;
+  color: var(--text-secondary);
+  font-size: 1.125rem;
+}
+
+.error-message {
+  background: #fee2e2;
+  color: #991b1b;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  border-left: 4px solid #ef4444;
+}
+
 @media (max-width: 768px) {
   .container {
     padding: 1rem;
@@ -178,4 +193,3 @@ body {
     padding: 1rem;
   }
 }
-

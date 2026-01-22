@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { apiService } from '../services/api.service';
 import Navbar from '../components/Navbar';
+import RangeIndicator from '../components/RangeIndicator';
 import './BiomarkerDetails.css';
 
 const BiomarkerDetails = () => {
@@ -24,6 +25,8 @@ const BiomarkerDetails = () => {
       setReport(reportData);
       if (reportData.biomarkers.length > 0) {
         setSelectedBiomarker(reportData.biomarkers[0]);
+        // Auto-fetch details for first biomarker
+        handleBiomarkerClick(reportData.biomarkers[0]);
       }
     } catch (error) {
       console.error('Failed to fetch report:', error);
@@ -34,23 +37,25 @@ const BiomarkerDetails = () => {
 
   const handleBiomarkerClick = async (biomarker) => {
     setSelectedBiomarker(biomarker);
-    setDetails(null); // Reset details when switching biomarkers
+    setDetails(null);
     setLoadingDetails(true);
     try {
       const detailsData = await apiService.getBiomarkerDetails(
         biomarker.testName,
         reportId
       );
-      // Safely set details even if explanation is missing
       setDetails(detailsData || {});
     } catch (error) {
       console.error('Failed to fetch biomarker details:', error);
-      // Set empty details object on error to prevent white screen
       setDetails({});
     } finally {
       setLoadingDetails(false);
     }
   };
+
+  // Group biomarkers by status
+  const normalBiomarkers = report?.biomarkers.filter(b => b.status === 'NORMAL') || [];
+  const abnormalBiomarkers = report?.biomarkers.filter(b => b.status !== 'NORMAL') || [];
 
   if (loading) {
     return (
@@ -75,155 +80,188 @@ const BiomarkerDetails = () => {
   }
 
   return (
-    <div>
+    <div className="biomarker-page">
       <Navbar user={user} logout={logout} />
       <div className="container">
-        <div className="page-header">
-          <Link to="/dashboard" className="back-link">← Back to Dashboard</Link>
-          <h1>Report Details</h1>
-          <p className="report-date">
-            {new Date(report.reportDate).toLocaleDateString()}
-          </p>
+        {/* Alerts Section */}
+        {abnormalBiomarkers.length > 0 && (
+          <div className="alerts-section">
+            {abnormalBiomarkers.slice(0, 2).map((biomarker, idx) => (
+              <div key={idx} className="alert-box">
+                <span className="alert-icon">⚠️</span>
+                <div>
+                  <strong>{biomarker.testName}:</strong> This value is{' '}
+                  {biomarker.status === 'HIGH' ? 'significantly above' : 'significantly below'} the normal range.
+                  Please consult your healthcare provider.
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Extracted Biomarkers Header */}
+        <div className="section-header-large">
+          <h1 className="page-title">
+            <span className="title-icon">📊</span>
+            Extracted Biomarkers
+          </h1>
         </div>
 
-        <div className="biomarker-layout">
-          <div className="biomarker-list">
-            <h2>Biomarkers ({report.biomarkers.length})</h2>
-            <div className="biomarkers-grid">
-              {report.biomarkers.map((biomarker, index) => (
-                <div
-                  key={index}
-                  className={`biomarker-card ${
-                    selectedBiomarker?.testName === biomarker.testName
-                      ? 'selected'
-                      : ''
-                  } ${biomarker.status.toLowerCase()}`}
-                  onClick={() => handleBiomarkerClick(biomarker)}
-                >
-                  <h3>{biomarker.testName}</h3>
-                  <div className="biomarker-value">
-                    {biomarker.value} {biomarker.unit}
+        {/* Biomarker Cards Grid */}
+        <div className="biomarkers-container">
+          {abnormalBiomarkers.length > 0 && (
+            <div className="biomarker-group">
+              <h2 className="group-title">Needs Attention</h2>
+              <div className="biomarkers-grid">
+                {abnormalBiomarkers.map((biomarker, index) => (
+                  <div
+                    key={`abnormal-${index}`}
+                    className={`biomarker-card-modern ${
+                      selectedBiomarker?.testName === biomarker.testName ? 'selected' : ''
+                    } ${biomarker.status.toLowerCase()}`}
+                    onClick={() => handleBiomarkerClick(biomarker)}
+                  >
+                    <div className="biomarker-card-header-modern">
+                      <div className="status-icon-modern">
+                        {biomarker.status === 'HIGH' ? '📈' : '📉'}
+                      </div>
+                      <div className={`status-badge-modern status-${biomarker.status.toLowerCase()}`}>
+                        {biomarker.status}
+                      </div>
+                    </div>
+                    <div className="biomarker-name-modern">{biomarker.testName}</div>
+                    <div className="biomarker-ref-modern">Ref: {biomarker.referenceRange}</div>
+                    <div className={`biomarker-value-modern value-${biomarker.status.toLowerCase()}`}>
+                      {biomarker.value} {biomarker.unit}
+                    </div>
+                    <div className="biomarker-percentage">95%</div>
                   </div>
-                  <div className={`status-badge status-${biomarker.status.toLowerCase()}`}>
-                    {biomarker.status}
-                  </div>
-                  <div className="reference-range">
-                    Range: {biomarker.referenceRange}
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
-          <div className="biomarker-details">
-            {selectedBiomarker && (
-              <>
-                <h2>{selectedBiomarker.testName} Details</h2>
-                <div className="card">
-                  <div className="detail-section">
-                    <h3>Test Result</h3>
-                    <div className="detail-row">
-                      <span>Value:</span>
-                      <strong>
-                        {selectedBiomarker.value} {selectedBiomarker.unit}
-                      </strong>
+          {normalBiomarkers.length > 0 && (
+            <div className="biomarker-group">
+              <h2 className="group-title">
+                <span className="group-icon">✅</span>
+                Normal Results ({normalBiomarkers.length})
+              </h2>
+              <div className="biomarkers-grid">
+                {normalBiomarkers.map((biomarker, index) => (
+                  <div
+                    key={`normal-${index}`}
+                    className={`biomarker-card-modern ${
+                      selectedBiomarker?.testName === biomarker.testName ? 'selected' : ''
+                    } normal`}
+                    onClick={() => handleBiomarkerClick(biomarker)}
+                  >
+                    <div className="biomarker-card-header-modern">
+                      <div className="status-icon-modern">✅</div>
+                      <div className="status-badge-modern status-normal">Normal</div>
                     </div>
-                    <div className="detail-row">
-                      <span>Status:</span>
-                      <span
-                        className={`status-badge status-${selectedBiomarker.status.toLowerCase()}`}
-                      >
-                        {selectedBiomarker.status}
-                      </span>
+                    <div className="biomarker-name-modern">{biomarker.testName}</div>
+                    <div className="biomarker-ref-modern">Ref: {biomarker.referenceRange}</div>
+                    <div className="biomarker-value-modern value-normal">
+                      {biomarker.value} {biomarker.unit}
                     </div>
-                    <div className="detail-row">
-                      <span>Reference Range:</span>
-                      <span>{selectedBiomarker.referenceRange}</span>
-                    </div>
+                    <div className="biomarker-percentage">95%</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Selected Biomarker Details */}
+        {selectedBiomarker && (
+          <div className="biomarker-details-modern">
+            <div className="detail-card">
+              <div className="detail-header">
+                <h2 className="detail-title">
+                  {selectedBiomarker.testName}
+                  <span className={`detail-status-badge status-${selectedBiomarker.status.toLowerCase()}`}>
+                    {selectedBiomarker.status}
+                  </span>
+                </h2>
+              </div>
+
+              {/* Range Indicator */}
+              <RangeIndicator
+                value={selectedBiomarker.value}
+                referenceRange={selectedBiomarker.referenceRange}
+                unit={selectedBiomarker.unit}
+                status={selectedBiomarker.status}
+              />
+
+              {/* AI Insights */}
+              {loadingDetails ? (
+                <div className="loading-insights">
+                  <div className="spinner"></div>
+                  <p>Loading insights...</p>
+                </div>
+              ) : selectedBiomarker.status === 'NORMAL' ? (
+                <div className="insight-section">
+                  <p className="normal-insight">
+                    ✅ Your {selectedBiomarker.testName} is within the healthy range.
+                  </p>
+                </div>
+              ) : details && details.explanation && typeof details.explanation === 'object' ? (
+                <div className="insight-section">
+                  <div className="insight-explanation">
+                    <h3>Explanation</h3>
+                    <p>{details.explanation.explanation || 'No AI insights available for this biomarker yet.'}</p>
                   </div>
 
-                  {loadingDetails ? (
-                    <div className="loading">Loading insights...</div>
-                  ) : selectedBiomarker.status === 'NORMAL' ? (
-                    <div className="detail-section">
-                      <p className="normal-message">
-                        ✅ This biomarker is within normal range. No specific
-                        recommendations needed.
-                      </p>
+                  {Array.isArray(details.explanation.lifestyleRecommendations) &&
+                    details.explanation.lifestyleRecommendations.length > 0 && (
+                    <div className="insight-lifestyle">
+                      <h3>Lifestyle Tips</h3>
+                      <ul>
+                        {details.explanation.lifestyleRecommendations.map((tip, idx) => (
+                          <li key={idx}>{tip}</li>
+                        ))}
+                      </ul>
                     </div>
-                  ) : details && details.explanation && typeof details.explanation === 'object' ? (
-                    <>
-                      <div className="detail-section">
-                        <h3>Explanation</h3>
-                        <p>{details.explanation.explanation || 'No AI insights available for this biomarker yet.'}</p>
-                      </div>
+                  )}
 
-                      {Array.isArray(details.explanation.dietarySuggestions) &&
-                        details.explanation.dietarySuggestions.length > 0 && (
-                        <div className="detail-section">
-                          <h3>Dietary Suggestions</h3>
-                          <ul>
-                            {details.explanation.dietarySuggestions.map((suggestion, idx) => (
-                              <li key={idx}>{suggestion}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-
-                      {Array.isArray(details.explanation.lifestyleRecommendations) &&
-                        details.explanation.lifestyleRecommendations.length > 0 && (
-                        <div className="detail-section">
-                          <h3>Lifestyle Recommendations</h3>
-                          <ul>
-                            {details.explanation.lifestyleRecommendations.map((rec, idx) => (
-                              <li key={idx}>{rec}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-
-                      <div className="disclaimer-box">
-                        <strong>⚠️ Disclaimer:</strong> This is not a medical
-                        prescription. Consult a doctor.
+                  {Array.isArray(details.explanation.dietarySuggestions) &&
+                    details.explanation.dietarySuggestions.length > 0 && (
+                    <div className="insight-foods">
+                      <h3>Foods to Include</h3>
+                      <div className="food-tags">
+                        {details.explanation.dietarySuggestions.slice(0, 4).map((food, idx) => (
+                          <span key={idx} className="food-tag include">
+                            {food.toLowerCase().includes('fruit') ? 'fruits' :
+                             food.toLowerCase().includes('vegetable') ? 'vegetables' :
+                             food.toLowerCase().includes('grain') ? 'whole grains' :
+                             food.toLowerCase().includes('protein') ? 'lean proteins' : food}
+                          </span>
+                        ))}
                       </div>
-                    </>
-                  ) : details && typeof details.explanation === 'string' && details.explanation.trim() ? (
-                    // Backward compatibility in case backend returns explanation as string
-                    <>
-                      <div className="detail-section">
-                        <h3>Explanation</h3>
-                        <p>{details.explanation}</p>
-                      </div>
-                      <div className="disclaimer-box">
-                        <strong>⚠️ Disclaimer:</strong> This is not a medical
-                        prescription. Consult a doctor.
-                      </div>
-                    </>
-                  ) : (
-                    <div className="detail-section">
-                      <div className="insight-fallback">
-                        <p>
-                          <strong>No AI insights available</strong>
-                        </p>
-                        <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginTop: '0.5rem' }}>
-                          AI insights are temporarily unavailable for this biomarker. 
-                          Please consult with a healthcare provider for detailed interpretation.
-                        </p>
-                        <div className="disclaimer-box" style={{ marginTop: '1rem' }}>
-                          <strong>⚠️ Disclaimer:</strong> This is not a medical prescription. Consult a doctor.
-                        </div>
+                      <h3 style={{ marginTop: '1rem' }}>Foods to Limit</h3>
+                      <div className="food-tags">
+                        <span className="food-tag limit">processed foods</span>
+                        <span className="food-tag limit">excessive sugar</span>
+                        <span className="food-tag limit">excessive salt</span>
                       </div>
                     </div>
                   )}
                 </div>
-              </>
-            )}
+              ) : (
+                <div className="insight-section">
+                  <div className="insight-fallback">
+                    <p><strong>No AI insights available</strong></p>
+                    <p>AI insights are temporarily unavailable for this biomarker. Please consult with a healthcare provider for detailed interpretation.</p>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
 };
 
 export default BiomarkerDetails;
-

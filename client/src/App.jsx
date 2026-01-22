@@ -7,6 +7,7 @@ import UploadReport from './pages/UploadReport';
 import BiomarkerDetails from './pages/BiomarkerDetails';
 import Trends from './pages/Trends';
 import DoctorSummary from './pages/DoctorSummary';
+import Profile from './pages/Profile';
 import PrivateRoute from './components/PrivateRoute';
 import DisclaimerBanner from './components/DisclaimerBanner';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -57,6 +58,14 @@ function App() {
               element={
                 <PrivateRoute>
                   <DoctorSummary />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/profile"
+              element={
+                <PrivateRoute>
+                  <Profile />
                 </PrivateRoute>
               }
             />
