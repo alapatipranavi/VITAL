@@ -3,7 +3,10 @@ import { generateDoctorSummary } from '../services/gemini.service.js';
 
 export const getTrends = async (req, res) => {
   try {
-    const { testName } = req.query;
+    // NOTE: Route is `/api/trends/:testName` (param), but we also support query (?testName=)
+    // Normalize to avoid case/space mismatches (e.g., "GFR Estimated")
+    const rawName = (req.params?.testName ?? req.query?.testName ?? '').toString();
+    const testName = decodeURIComponent(rawName).trim();
 
     if (!testName) {
       return res.status(400).json({ message: 'testName is required' });
@@ -14,11 +17,11 @@ export const getTrends = async (req, res) => {
       .sort({ reportDate: 1 })
       .select('reportDate biomarkers');
 
-    // Extract specific biomarker across all reports
+    // Extract specific biomarker across all reports (case-insensitive)
     const trendData = reports
       .map(report => {
         const biomarker = report.biomarkers.find(
-          b => b.testName.toLowerCase() === testName.toLowerCase()
+          b => (b?.testName || '').toLowerCase().trim() === testName.toLowerCase()
         );
         if (biomarker) {
           return {
@@ -47,6 +50,17 @@ export const getTrends = async (req, res) => {
       } else {
         trendDirection = 'decreasing';
       }
+    }
+
+    // Handle single data point (still render a chart on the frontend)
+    if (trendData.length === 1) {
+      const single = trendData[0];
+      return res.json({
+        testName,
+        trendData,
+        trendDirection: 'stable',
+        insight: `Current ${testName} value: ${single.value} ${single.unit}. Upload more reports to see trends.`
+      });
     }
 
     // Generate insight text
@@ -94,8 +108,9 @@ export const getAllTrends = async (req, res) => {
     const trends = Array.from(biomarkerNames).map(testName => {
       const trendData = reports
         .map(report => {
+          // Use case-insensitive matching to ensure consistency
           const biomarker = report.biomarkers.find(
-            b => b.testName === testName
+            b => b.testName.toLowerCase() === testName.toLowerCase()
           );
           if (biomarker) {
             return {

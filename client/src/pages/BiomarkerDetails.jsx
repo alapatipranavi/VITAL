@@ -34,15 +34,19 @@ const BiomarkerDetails = () => {
 
   const handleBiomarkerClick = async (biomarker) => {
     setSelectedBiomarker(biomarker);
+    setDetails(null); // Reset details when switching biomarkers
     setLoadingDetails(true);
     try {
       const detailsData = await apiService.getBiomarkerDetails(
         biomarker.testName,
         reportId
       );
-      setDetails(detailsData);
+      // Safely set details even if explanation is missing
+      setDetails(detailsData || {});
     } catch (error) {
       console.error('Failed to fetch biomarker details:', error);
+      // Set empty details object on error to prevent white screen
+      setDetails({});
     } finally {
       setLoadingDetails(false);
     }
@@ -140,29 +144,38 @@ const BiomarkerDetails = () => {
 
                   {loadingDetails ? (
                     <div className="loading">Loading insights...</div>
-                  ) : details?.explanation ? (
+                  ) : selectedBiomarker.status === 'NORMAL' ? (
+                    <div className="detail-section">
+                      <p className="normal-message">
+                        ✅ This biomarker is within normal range. No specific
+                        recommendations needed.
+                      </p>
+                    </div>
+                  ) : details && details.explanation && typeof details.explanation === 'object' ? (
                     <>
                       <div className="detail-section">
                         <h3>Explanation</h3>
-                        <p>{details.explanation}</p>
+                        <p>{details.explanation.explanation || 'No AI insights available for this biomarker yet.'}</p>
                       </div>
 
-                      {details.dietarySuggestions?.length > 0 && (
+                      {Array.isArray(details.explanation.dietarySuggestions) &&
+                        details.explanation.dietarySuggestions.length > 0 && (
                         <div className="detail-section">
                           <h3>Dietary Suggestions</h3>
                           <ul>
-                            {details.dietarySuggestions.map((suggestion, idx) => (
+                            {details.explanation.dietarySuggestions.map((suggestion, idx) => (
                               <li key={idx}>{suggestion}</li>
                             ))}
                           </ul>
                         </div>
                       )}
 
-                      {details.lifestyleRecommendations?.length > 0 && (
+                      {Array.isArray(details.explanation.lifestyleRecommendations) &&
+                        details.explanation.lifestyleRecommendations.length > 0 && (
                         <div className="detail-section">
                           <h3>Lifestyle Recommendations</h3>
                           <ul>
-                            {details.lifestyleRecommendations.map((rec, idx) => (
+                            {details.explanation.lifestyleRecommendations.map((rec, idx) => (
                               <li key={idx}>{rec}</li>
                             ))}
                           </ul>
@@ -174,16 +187,32 @@ const BiomarkerDetails = () => {
                         prescription. Consult a doctor.
                       </div>
                     </>
-                  ) : selectedBiomarker.status === 'NORMAL' ? (
-                    <div className="detail-section">
-                      <p className="normal-message">
-                        ✅ This biomarker is within normal range. No specific
-                        recommendations needed.
-                      </p>
-                    </div>
+                  ) : details && typeof details.explanation === 'string' && details.explanation.trim() ? (
+                    // Backward compatibility in case backend returns explanation as string
+                    <>
+                      <div className="detail-section">
+                        <h3>Explanation</h3>
+                        <p>{details.explanation}</p>
+                      </div>
+                      <div className="disclaimer-box">
+                        <strong>⚠️ Disclaimer:</strong> This is not a medical
+                        prescription. Consult a doctor.
+                      </div>
+                    </>
                   ) : (
                     <div className="detail-section">
-                      <p>Loading insights for this biomarker...</p>
+                      <div className="insight-fallback">
+                        <p>
+                          <strong>No AI insights available</strong>
+                        </p>
+                        <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginTop: '0.5rem' }}>
+                          AI insights are temporarily unavailable for this biomarker. 
+                          Please consult with a healthcare provider for detailed interpretation.
+                        </p>
+                        <div className="disclaimer-box" style={{ marginTop: '1rem' }}>
+                          <strong>⚠️ Disclaimer:</strong> This is not a medical prescription. Consult a doctor.
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>

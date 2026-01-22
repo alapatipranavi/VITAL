@@ -43,7 +43,9 @@ function generateQueryEmbedding(text) {
     .split(/\s+/)
     .filter(w => w.length > 2);
   
-  const embedding = new Array(1536).fill(0);
+  // Match the dimension used in ingestion script (3072)
+  const EMBEDDING_DIMENSION = 1536;
+  const embedding = new Array(EMBEDDING_DIMENSION).fill(0);
   const wordFreq = {};
   
   words.forEach(word => {
@@ -57,7 +59,7 @@ function generateQueryEmbedding(text) {
         hash = ((hash << 5) - hash) + word.charCodeAt(i);
         hash = hash & hash;
       }
-      const index = Math.abs(hash) % 1536;
+      const index = Math.abs(hash) % EMBEDDING_DIMENSION;
       embedding[index] += freq / (seed + 1);
     }
   });
@@ -69,7 +71,7 @@ function generateQueryEmbedding(text) {
       hash = ((hash << 5) - hash) + bigram.charCodeAt(j);
       hash = hash & hash;
     }
-    const index = Math.abs(hash) % 1536;
+      const index = Math.abs(hash) % EMBEDDING_DIMENSION;
     embedding[index] += 0.5;
   }
   

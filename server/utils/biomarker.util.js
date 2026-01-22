@@ -61,23 +61,51 @@ export const determineStatus = (value, referenceRange) => {
 };
 
 /**
- * Normalize units (basic normalization for common units)
+ * Normalize units (comprehensive normalization for common units)
  */
 export const normalizeUnit = (unit) => {
+  if (!unit || typeof unit !== 'string') return 'N/A';
+  
   const normalized = unit.trim().toLowerCase();
   
-  // Common unit mappings
+  // Comprehensive unit mappings
   const mappings = {
+    // Volume/Weight units
     'mg/dl': 'mg/dL',
-    'mg/dl': 'mg/dL',
+    'mg%': 'mg/dL',
     'g/dl': 'g/dL',
-    'g/dl': 'g/dL',
-    '%': '%',
+    'g%': 'g/dL',
+    'ng/ml': 'ng/mL',
+    'ng/dl': 'ng/dL',
+    'pg/ml': 'pg/mL',
+    'ug/dl': 'µg/dL',
+    'mcg/dl': 'µg/dL',
+    
+    // Molar units
     'mmol/l': 'mmol/L',
+    'umol/l': 'µmol/L',
+    
+    // Percentage
+    '%': '%',
+    'percent': '%',
+    
+    // Enzyme/Activity units
     'iu/l': 'IU/L',
-    'u/l': 'U/L'
+    'u/l': 'U/L',
+    'mu/l': 'mU/L',
+    'miu/l': 'mIU/L',
+    
+    // Count units
+    'k/ul': 'K/µL',
+    'k/ul': 'K/µL',
+    '/ul': '/µL',
+    '/mm3': '/mm³',
+    
+    // Other common units
+    'fmol/ml': 'fmol/mL',
+    'pmol/l': 'pmol/L'
   };
 
-  return mappings[normalized] || unit;
+  return mappings[normalized] || unit.trim();
 };
 

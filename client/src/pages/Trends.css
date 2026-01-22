@@ -31,7 +31,9 @@
 
 .trend-button.active {
   border-color: var(--primary-color);
-  background-color: #f0f4ff;
+  background: linear-gradient(135deg, rgba(20, 184, 166, 0.1) 0%, rgba(20, 184, 166, 0.05) 100%);
+  box-shadow: var(--shadow-soft);
+  transform: translateX(4px);
 }
 
 .trend-button-header {
@@ -52,15 +54,41 @@
   color: var(--primary-color);
 }
 
-.trend-chart h2 {
-  margin-bottom: 1rem;
+.trend-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid var(--border-light);
+}
+
+.trend-header h2 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 1.5rem;
+}
+
+.trend-meta {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.trend-unit {
+  background: var(--primary-light);
+  color: var(--primary-dark);
+  padding: 0.25rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
 }
 
 .insight-box {
-  background-color: #dbeafe;
+  background: linear-gradient(135deg, rgba(20, 184, 166, 0.08) 0%, rgba(99, 102, 241, 0.05) 100%);
   border-left: 4px solid var(--primary-color);
   padding: 1rem;
-  border-radius: 6px;
+  border-radius: 8px;
   margin-bottom: 1.5rem;
 }
 

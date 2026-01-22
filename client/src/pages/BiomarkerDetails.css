@@ -135,6 +135,13 @@
   border-radius: 6px;
 }
 
+.insight-fallback {
+  padding: 1rem;
+  background-color: var(--bg-color);
+  border-radius: 6px;
+  border: 1px solid var(--border-light);
+}
+
 @media (max-width: 968px) {
   .biomarker-layout {
     grid-template-columns: 1fr;

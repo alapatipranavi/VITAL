@@ -32,10 +32,32 @@ const Trends = () => {
 
   const handleTrendSelect = async (testName) => {
     try {
+      setLoading(true);
       const trendData = await apiService.getTrends(testName);
-      setSelectedTrend(trendData);
+      // Ensure trendData has the required structure
+      if (trendData && trendData.testName) {
+        setSelectedTrend(trendData);
+      } else {
+        console.error('Invalid trend data received:', trendData);
+        // Set a fallback trend with empty data
+        setSelectedTrend({
+          testName,
+          trendData: [],
+          trendDirection: 'stable',
+          insight: 'No trend data available for this biomarker.'
+        });
+      }
     } catch (error) {
       console.error('Failed to fetch trend:', error);
+      // Set fallback on error
+      setSelectedTrend({
+        testName,
+        trendData: [],
+        trendDirection: 'stable',
+        insight: `Unable to load trend data for ${testName}. Please try again.`
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -116,9 +138,14 @@ const Trends = () => {
               </div>
 
               <div className="trend-chart">
-                {selectedTrend && selectedTrend.trendData.length > 0 ? (
+                {selectedTrend && selectedTrend.trendData && selectedTrend.trendData.length > 0 ? (
                   <>
-                    <h2>{selectedTrend.testName} Trend</h2>
+                    <div className="trend-header">
+                      <h2>{selectedTrend.testName} Trend</h2>
+                      <div className="trend-meta">
+                        <span className="trend-unit">{selectedTrend.trendData[0]?.unit || ''}</span>
+                      </div>
+                    </div>
                     <div className="card">
                       {selectedTrend.insight && (
                         <div className="insight-box">
@@ -127,16 +154,40 @@ const Trends = () => {
                       )}
                       <ResponsiveContainer width="100%" height={400}>
                         <LineChart data={formatChartData(selectedTrend.trendData)}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="date" />
-                          <YAxis />
-                          <Tooltip />
-                          <Legend />
+                          <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                          <XAxis 
+                            dataKey="date" 
+                            stroke="#475569"
+                            style={{ fontSize: '12px' }}
+                          />
+                          <YAxis 
+                            stroke="#475569"
+                            style={{ fontSize: '12px' }}
+                            label={{ value: `Value (${selectedTrend.trendData[0]?.unit || ''})`, angle: -90, position: 'insideLeft', style: { fontSize: '12px', fill: '#475569' } }}
+                          />
+                          <Tooltip 
+                            contentStyle={{ 
+                              backgroundColor: '#ffffff', 
+                              border: '1px solid #cbd5e1',
+                              borderRadius: '8px',
+                              padding: '8px'
+                            }}
+                            formatter={(value, name, props) => [
+                              `${value} ${selectedTrend.trendData[0]?.unit || ''}`,
+                              'Value'
+                            ]}
+                            labelFormatter={(label) => `Date: ${label}`}
+                          />
+                          <Legend 
+                            wrapperStyle={{ paddingTop: '10px' }}
+                          />
                           <Line
                             type="monotone"
                             dataKey="value"
-                            stroke="#2563eb"
-                            strokeWidth={2}
+                            stroke="#14b8a6"
+                            strokeWidth={3}
+                            dot={{ fill: '#14b8a6', r: 4 }}
+                            activeDot={{ r: 6 }}
                             name={`Value (${selectedTrend.trendData[0]?.unit || ''})`}
                           />
                         </LineChart>
@@ -153,9 +204,20 @@ const Trends = () => {
                       </div>
                     </div>
                   </>
+                ) : selectedTrend ? (
+                  <div className="card">
+                    <div className="empty-state">
+                      <p>
+                        {selectedTrend.insight || 'No trend data available for this biomarker.'}
+                      </p>
+                      <p className="text-secondary" style={{ fontSize: '0.875rem', marginTop: '0.5rem' }}>
+                        Upload more reports to see trends over time.
+                      </p>
+                    </div>
+                  </div>
                 ) : (
                   <div className="card">
-                    <p>No trend data available for this biomarker.</p>
+                    <div className="loading">Select a biomarker to view trends</div>
                   </div>
                 )}
               </div>

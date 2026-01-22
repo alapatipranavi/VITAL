@@ -43,15 +43,31 @@ export const getBiomarkerDetails = async (req, res) => {
           ragContext,
           req.user.profile || {}
         );
+        // Ensure explanation is an object with required fields
+        if (!explanation || typeof explanation !== 'object') {
+          explanation = null;
+        } else {
+          // Ensure required fields exist
+          if (!explanation.explanation) {
+            explanation.explanation = '';
+          }
+          if (!Array.isArray(explanation.dietarySuggestions)) {
+            explanation.dietarySuggestions = [];
+          }
+          if (!Array.isArray(explanation.lifestyleRecommendations)) {
+            explanation.lifestyleRecommendations = [];
+          }
+        }
       } catch (error) {
         console.error('Explanation generation error:', error);
-        // Continue without explanation
+        // Set explanation to null on error
+        explanation = null;
       }
     }
 
     res.json({
       biomarker,
-      explanation,
+      explanation: explanation || null,
       ragContext: biomarker.status !== 'NORMAL' ? ragContext : null
     });
   } catch (error) {

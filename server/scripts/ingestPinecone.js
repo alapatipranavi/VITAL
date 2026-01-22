@@ -41,8 +41,10 @@ const pinecone = new Pinecone({
 const indexName = process.env.PINECONE_INDEX || 'vitalsense';
 const index = pinecone.index(indexName);
 
-// Embedding dimension (OpenAI text-embedding-3-small uses 1536)
-const EMBEDDING_DIMENSION = 1536;
+// Embedding dimension - MUST match your Pinecone index dimension
+// Check your index dimension in Pinecone dashboard
+// Common: 1536 (OpenAI text-embedding-3-small), 3072 (OpenAI text-embedding-3-large), 768, etc.
+const EMBEDDING_DIMENSION = 1536; // Updated to match your index
 
 /**
  * Generate embeddings using OpenAI or fallback method

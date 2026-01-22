@@ -28,9 +28,15 @@ export const AuthProvider = ({ children }) => {
   const fetchUser = async () => {
     try {
       const userData = await authService.getProfile();
-      setUser(userData);
+      if (userData) {
+        setUser(userData);
+      } else {
+        // Invalid user data, clear token
+        logout();
+      }
     } catch (error) {
       console.error('Failed to fetch user:', error);
+      // Clear invalid token
       logout();
     } finally {
       setLoading(false);

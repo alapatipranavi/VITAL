@@ -47,7 +47,12 @@ export const extractBiomarkers = async (filePath, mimeType) => {
 
     const base64Data = fileData.toString('base64');
 
-    const prompt = `You are a medical lab report analyzer. Extract all biomarker test results from this lab report image/PDF.
+    const prompt = `You are a medical lab report analyzer. Extract ALL biomarker test results from this lab report image/PDF.
+
+CRITICAL INSTRUCTIONS:
+- Extract EVERY test result visible in the report
+- Be precise with values, units, and reference ranges
+- Handle missing data gracefully
 
 Return ONLY a valid JSON array with this exact structure:
 [
@@ -59,14 +64,34 @@ Return ONLY a valid JSON array with this exact structure:
   }
 ]
 
-Rules:
-1. Extract ALL test results visible in the report
-2. testName: Use standard medical abbreviations (e.g., "HbA1c", "HDL", "LDL", "Total Cholesterol", "Triglycerides", "Glucose", "Creatinine", "Hemoglobin")
-3. value: Extract the numeric value only
-4. unit: Extract the unit (%, mg/dL, g/dL, mmol/L, etc.)
-5. referenceRange: Extract the reference/normal range as a string (e.g., "4.0 - 5.6" or "< 5.6" or "> 4.0")
-6. If a value is missing or unclear, skip that test
-7. Return ONLY the JSON array, no additional text
+EXTRACTION RULES:
+1. testName: Use standard medical abbreviations/exact names from report
+   - Examples: "HbA1c", "HDL", "LDL", "Total Cholesterol", "Triglycerides", "Glucose", "Creatinine", "Hemoglobin", "Urea", "AST", "ALT", "Bilirubin", "TSH", "T3", "T4", "Vitamin D", "B12", "Folate", "Iron", "Ferritin"
+   - Preserve exact spelling from report if standard abbreviation unclear
+
+2. value: Extract the NUMERIC value only
+   - Must be a number (integer or decimal)
+   - If value is non-numeric or unclear, set to null and include in array with note
+   - Handle ranges (e.g., "5.2-6.8" → use first value or average)
+
+3. unit: Extract the unit exactly as shown
+   - Common: "%", "mg/dL", "g/dL", "mmol/L", "IU/L", "U/L", "ng/mL", "pg/mL", "mIU/L"
+   - If unit missing, use "N/A" or most common unit for that test
+   - Normalize variations: "mg/dl" → "mg/dL", "g/dl" → "g/dL"
+
+4. referenceRange: Extract reference/normal range as string
+   - Format: "low - high" (e.g., "4.0 - 5.6")
+   - Or single threshold: "< 5.6" or "> 4.0"
+   - If range missing, use "N/A" or common range for that test
+   - Handle formats: "4.0-5.6", "4.0 to 5.6", "4.0–5.6" → normalize to "4.0 - 5.6"
+
+5. Edge Cases:
+   - Missing reference range: Use "N/A"
+   - Unclear units: Use most common unit for that test type
+   - Non-numeric values: Set value to null, still include in array
+   - Multiple values for same test: Include all as separate entries
+
+6. Output: Return ONLY the JSON array, no markdown, no explanations, no additional text
 
 JSON array:`;
 
@@ -126,14 +151,14 @@ export const generateExplanation = async (biomarker, ragContext, userProfile) =>
 
     const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
-    const prompt = `You are a medical information assistant. Provide a clear, simple explanation about this biomarker result.
+    const prompt = `You are a wellness information assistant. Provide clear, simple, wellness-focused guidance about this biomarker result.
 
 Biomarker: ${biomarker.testName}
 Value: ${biomarker.value} ${biomarker.unit}
 Reference Range: ${biomarker.referenceRange}
 Status: ${biomarker.status}
 
-Relevant Medical Context:
+Relevant Context:
 ${ragContext.biomarkerInfo || 'No specific context available'}
 
 Nutrition & Lifestyle Context:
@@ -144,11 +169,18 @@ User Profile:
 - Gender: ${userProfile.gender || 'Not specified'}
 - Diet Preference: ${userProfile.dietPreference || 'Not specified'}
 
+INSTRUCTIONS:
+- Use simple, non-medical language
+- Focus on wellness and lifestyle, NOT medical diagnosis or treatment
+- Be encouraging and actionable
+- Avoid prescription-style language
+- Keep explanations brief and clear
+
 Provide:
-1. Simple explanation (2-3 sentences) of what this biomarker means
-2. Why the value might be ${biomarker.status.toLowerCase()}
-3. Dietary suggestions (considering user's diet preference: ${userProfile.dietPreference || 'none'})
-4. Lifestyle recommendations (2-3 actionable items)
+1. Simple explanation (2-3 sentences) of what this biomarker means in everyday terms
+2. Why the value might be ${biomarker.status.toLowerCase()} (simple, non-medical reasons)
+3. Dietary suggestions (2-3 items, considering user's diet preference: ${userProfile.dietPreference || 'none'})
+4. Lifestyle recommendations (2-3 actionable wellness items)
 
 Format as JSON:
 {
@@ -157,7 +189,7 @@ Format as JSON:
   "lifestyleRecommendations": ["...", "..."]
 }
 
-IMPORTANT: Include this disclaimer at the end: "This is not a medical prescription. Consult a doctor."`;
+CRITICAL: This is wellness guidance only, not medical advice. Keep language simple and wellness-focused.`;
 
     const result = await model.generateContent(prompt);
     const response = await result.response;
@@ -206,7 +238,7 @@ export const generateDoctorSummary = async (reports, abnormalBiomarkers) => {
 
     const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
-    const prompt = `Generate a concise, doctor-ready summary from these lab reports.
+    const prompt = `Generate a concise, professional doctor-ready summary from these lab reports.
 
 Reports Summary:
 ${JSON.stringify(reports, null, 2)}
@@ -214,12 +246,19 @@ ${JSON.stringify(reports, null, 2)}
 Abnormal Biomarkers:
 ${JSON.stringify(abnormalBiomarkers, null, 2)}
 
-Generate exactly 5 bullet points:
-1. Persistent deficiencies or chronic issues
-2. Improving markers (if any)
-3. Critical alerts requiring immediate attention
-4. Potential supplement or medication interactions
-5. Recommended consultation focus
+Generate exactly 5 professional bullet points:
+1. Persistent abnormalities or chronic patterns (mention specific biomarkers if notable)
+2. Improving trends (if any biomarkers show positive changes)
+3. Critical alerts requiring immediate medical attention (if any)
+4. Potential considerations for medication or supplement review
+5. Recommended consultation focus areas
+
+Requirements:
+- Be professional and concise
+- Use medical terminology appropriately
+- Focus on actionable insights
+- Highlight trends and patterns
+- Keep each point to 1-2 sentences maximum
 
 Format as JSON array:
 ["bullet point 1", "bullet point 2", ...]`;

@@ -87,7 +87,14 @@ const UploadReport = () => {
               className="btn btn-primary"
               disabled={loading || !file}
             >
-              {loading ? 'Processing...' : 'Upload & Analyze'}
+              {loading ? (
+                <>
+                  <span className="loading-spinner"></span>
+                  Processing with AI...
+                </>
+              ) : (
+                'Upload & Analyze'
+              )}
             </button>
           </form>
           <div className="upload-tips">
