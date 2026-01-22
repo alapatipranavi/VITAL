@@ -1,0 +1,88 @@
+.trends-layout {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 2rem;
+}
+
+.trends-list h2 {
+  margin-bottom: 1rem;
+}
+
+.trend-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.trend-button {
+  background: var(--card-bg);
+  border: 2px solid var(--border-color);
+  border-radius: 6px;
+  padding: 1rem;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s;
+}
+
+.trend-button:hover {
+  border-color: var(--primary-color);
+  box-shadow: var(--shadow);
+}
+
+.trend-button.active {
+  border-color: var(--primary-color);
+  background-color: #f0f4ff;
+}
+
+.trend-button-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.trend-button-header span:first-child {
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.trend-button-value {
+  font-size: 1.25rem;
+  font-weight: bold;
+  color: var(--primary-color);
+}
+
+.trend-chart h2 {
+  margin-bottom: 1rem;
+}
+
+.insight-box {
+  background-color: #dbeafe;
+  border-left: 4px solid var(--primary-color);
+  padding: 1rem;
+  border-radius: 6px;
+  margin-bottom: 1.5rem;
+}
+
+.insight-box p {
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.trend-info {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.trend-info p {
+  margin: 0.5rem 0;
+  color: var(--text-secondary);
+}
+
+@media (max-width: 968px) {
+  .trends-layout {
+    grid-template-columns: 1fr;
+  }
+}
+

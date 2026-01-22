@@ -1,0 +1,18 @@
+.disclaimer-banner {
+  background-color: #fef3c7;
+  border-bottom: 2px solid #f59e0b;
+  padding: 0.75rem 1rem;
+  text-align: center;
+  font-size: 0.875rem;
+  color: #92400e;
+}
+
+.disclaimer-content {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.disclaimer-banner strong {
+  font-weight: 600;
+}
+
