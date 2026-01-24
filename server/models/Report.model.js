@@ -41,6 +41,11 @@ const reportSchema = new mongoose.Schema({
   biomarkers: [biomarkerSchema],
   fileName: String,
   fileType: String,
+  // Optional wellness retest recommendation for this report
+  retestRecommendation: {
+    type: String,
+    default: null
+  },
   processedAt: {
     type: Date,
     default: Date.now

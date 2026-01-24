@@ -55,6 +55,26 @@ export const apiService = {
   getDoctorSummary: async () => {
     const response = await axios.get(`${API_URL}/trends/summary/doctor`);
     return response.data;
+  },
+
+  // Chatbot
+  chatWithReport: async (reportId, message) => {
+    const response = await axios.post(`${API_URL}/chat/report`, {
+      reportId,
+      message,
+    });
+    return response.data;
+  },
+
+  synthesizeSpeech: async (text) => {
+    const response = await axios.post(`${API_URL}/chat/tts`, { text });
+    return response.data;
+  },
+
+  // General health info mode (verified sources only)
+  chatGeneralHealth: async (message) => {
+    const response = await axios.post(`${API_URL}/chat/general`, { message });
+    return response.data;
   }
 };
 

@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { apiService } from '../services/api.service';
 import Navbar from '../components/Navbar';
 import RangeIndicator from '../components/RangeIndicator';
+import ReportChatbot from '../components/ReportChatbot';
 import './BiomarkerDetails.css';
 
 const BiomarkerDetails = () => {
@@ -257,6 +258,9 @@ const BiomarkerDetails = () => {
                 </div>
               )}
             </div>
+
+            {/* Report-scoped chatbot */}
+            <ReportChatbot reportId={reportId} />
           </div>
         )}
       </div>

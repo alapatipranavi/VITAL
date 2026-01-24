@@ -30,6 +30,20 @@ const Dashboard = () => {
     }
   };
 
+  const handleDeleteReport = async (id) => {
+    try {
+      await apiService.deleteReport(id);
+      // Remove from local state immediately
+      setReports(prev => prev.filter(r => r._id !== id));
+      // Refresh abnormal biomarkers
+      const abnormalData = await apiService.getAbnormalBiomarkers();
+      setAbnormalBiomarkers(abnormalData);
+    } catch (error) {
+      console.error('Failed to delete report:', error);
+      alert('Failed to delete report. Please try again.');
+    }
+  };
+
   // Calculate health metrics
   const calculateHealthScore = () => {
     if (reports.length === 0) return { score: 0, normal: 0, total: 0 };
@@ -160,44 +174,64 @@ const Dashboard = () => {
                   : 0;
                 
                 return (
-                  <Link 
-                    key={report._id} 
-                    to={`/biomarker/${report._id}`}
-                    className={`report-card ${index === 0 ? 'highlighted' : ''}`}
-                  >
-                    <div className="report-card-header">
-                      <div className="report-icon">📄</div>
-                      <div className="report-date">
-                        {new Date(report.reportDate).toLocaleDateString('en-US', { 
-                          month: 'long', 
-                          day: 'numeric', 
-                          year: 'numeric' 
-                        })}
+                  <div key={report._id} className={`report-card-wrapper ${index === 0 ? 'highlighted' : ''}`}>
+                    <Link 
+                      to={`/biomarker/${report._id}`}
+                      className="report-card"
+                    >
+                      <div className="report-card-header">
+                        <div className="report-icon">📄</div>
+                        <div className="report-date">
+                          {new Date(report.reportDate).toLocaleDateString('en-US', { 
+                            month: 'long', 
+                            day: 'numeric', 
+                            year: 'numeric' 
+                          })}
+                        </div>
                       </div>
-                    </div>
-                    <div className="report-filename">
-                      {report.fileName || `blood test ${new Date(report.reportDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }).toLowerCase()}.pdf`}
-                    </div>
-                    <div className="report-stats">
-                      <div className="report-stat normal-stat">
-                        <span className="stat-icon">✅</span>
-                        <span>{normalCount} Normal</span>
+                      <div className="report-filename">
+                        {report.fileName || `blood test ${new Date(report.reportDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }).toLowerCase()}.pdf`}
                       </div>
-                      <div className="report-stat attention-stat">
-                        <span className="stat-icon">⚠️</span>
-                        <span>{abnormalCount} Attention</span>
+                      <div className="report-stats">
+                        <div className="report-stat normal-stat">
+                          <span className="stat-icon">✅</span>
+                          <span>{normalCount} Normal</span>
+                        </div>
+                        <div className="report-stat attention-stat">
+                          <span className="stat-icon">⚠️</span>
+                          <span>{abnormalCount} Attention</span>
+                        </div>
                       </div>
-                    </div>
-                    <div className="report-progress">
-                      <div 
-                        className="progress-bar"
-                        style={{ 
-                          width: `${normalPercent}%`,
-                          backgroundColor: normalPercent >= 70 ? '#10b981' : normalPercent >= 50 ? '#f59e0b' : '#ef4444'
-                        }}
-                      ></div>
-                    </div>
-                  </Link>
+                      <div className="report-progress">
+                        <div 
+                          className="progress-bar"
+                          style={{ 
+                            width: `${normalPercent}%`,
+                            backgroundColor: normalPercent >= 70 ? '#10b981' : normalPercent >= 50 ? '#f59e0b' : '#ef4444'
+                          }}
+                        ></div>
+                      </div>
+                      {report.retestRecommendation && (
+                        <div className="report-retest">
+                          Suggested to retest after <span className="retest-highlight">{report.retestRecommendation}</span>
+                        </div>
+                      )}
+                    </Link>
+                    <button
+                      className="report-delete-btn"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (window.confirm('Are you sure you want to delete this report? This action cannot be undone.')) {
+                          handleDeleteReport(report._id);
+                        }
+                      }}
+                      aria-label="Delete report"
+                      title="Delete report"
+                    >
+                      🗑️
+                    </button>
+                  </div>
                 );
               })}
             </div>

@@ -9,6 +9,7 @@ import authRoutes from './routes/auth.routes.js';
 import reportRoutes from './routes/report.routes.js';
 import biomarkerRoutes from './routes/biomarker.routes.js';
 import trendRoutes from './routes/trend.routes.js';
+import chatRoutes from './routes/chat.routes.js';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -68,6 +69,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/biomarkers', biomarkerRoutes);
 app.use('/api/trends', trendRoutes);
+app.use('/api/chat', chatRoutes);
 
 /* =========================
    ❤️ HEALTH CHECK

@@ -1,6 +1,7 @@
 import Report from '../models/Report.model.js';
 import { extractBiomarkers } from '../services/gemini.service.js';
 import { determineStatus, normalizeUnit } from '../utils/biomarker.util.js';
+import { getReportRetestRecommendation } from '../utils/retest.util.js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -111,13 +112,17 @@ export const uploadReport = async (req, res) => {
       });
     }
 
+    // Derive a soft retest recommendation for this report (wellness only)
+    const retestRecommendation = getReportRetestRecommendation(processedBiomarkers);
+
     // Create report
     const report = new Report({
       userId: req.user._id,
       reportDate: new Date(), // In production, extract from PDF if available
       biomarkers: processedBiomarkers,
       fileName: req.file.originalname,
-      fileType: mimeType
+      fileType: mimeType,
+      retestRecommendation: retestRecommendation || null
     });
 
     await report.save();
@@ -138,6 +143,7 @@ export const uploadReport = async (req, res) => {
         id: report._id,
         reportDate: report.reportDate,
         biomarkers: report.biomarkers,
+        retestRecommendation: report.retestRecommendation,
         processedAt: report.processedAt
       }
     });
